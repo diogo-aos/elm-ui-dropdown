@@ -1,0 +1,151 @@
+module Main exposing (main)
+
+import Browser
+import Html
+import Html.Events exposing (onClick)
+
+import Element as E exposing (Element, el, text, column, row, alignRight, fill, width, rgb255, spacing, centerY, padding)
+import Element.Background as Background
+import Element.Border as Border
+import Element.Events as Events
+--import Element.Font as Font
+--import Element.Input as Input
+
+
+
+type alias Model =
+    { favoriteFood : Maybe Food
+    , status : Status}
+
+type Status
+    = Normal
+    | SelectFood
+        
+type FoodType
+    = FastFood
+    | Regional
+        
+type alias Food =
+    { id : Int
+    , name : String
+    , foodType : FoodType
+    }
+
+
+foodList : List Food
+foodList =
+    [ Food 0 "Hotdog" FastFood
+    , Food 1 "Hamburguer" FastFood
+    , Food 2 "Taco" FastFood
+    , Food 3 "Francesinha aka Little French" Regional
+    ]
+
+        
+initialModel : Model
+initialModel =
+    { favoriteFood = Nothing
+    , status = Normal
+    }
+
+
+type Msg
+    = NoAction
+    | ClickedSelectFood
+    | ClickedFood Food
+      
+
+
+update : Msg -> Model -> Model
+update msg model =
+    case msg of
+        NoAction ->
+            model
+
+        ClickedSelectFood ->
+            { model | status = SelectFood}
+                
+        ClickedFood food ->
+            { model | status = Normal, favoriteFood = Just food }
+
+
+view : Model -> Html.Html Msg
+view model =
+    let
+        favFood =
+            case model.status of
+                Normal ->
+                    favoriteFoodView model.favoriteFood
+
+                SelectFood ->
+                    viewFoodList foodList
+                    
+    in
+    E.layout
+        [ 
+        ]
+        (
+        E.column
+            [E.centerX
+            , E.centerY]
+            [ text "You favorite food is:"
+            , favFood
+            ]
+        )
+
+favoriteFoodView : Maybe Food -> E.Element Msg
+favoriteFoodView food =
+    let
+        showFood =
+            case food of
+                Nothing ->
+                    E.el
+                        [ Events.onClick ClickedSelectFood ]
+                        ( text "Click to select a food" )
+                Just favFood ->
+                    viewFood favFood
+    in
+        E.el
+            []
+            showFood
+        
+        
+viewFoodList : List Food -> E.Element Msg
+viewFoodList foods =
+    E.column
+        [ E.spacing 5
+        ]
+        <|
+            List.map viewSelectFood foods
+                
+foodTypeToStr : FoodType -> String
+foodTypeToStr someType =
+    case someType of
+        FastFood -> "Fast food"
+        Regional -> "Regional"
+            
+viewFood : Food -> E.Element Msg
+viewFood food =
+    E.column
+        [ Border.width 2
+        , Border.rounded 5
+        , E.padding 5
+        , Events.onClick ClickedSelectFood
+        ]
+        [ text food.name
+        , text <| foodTypeToStr food.foodType
+        ]
+
+viewSelectFood : Food -> E.Element Msg
+viewSelectFood food =
+    E.el
+        [ Events.onClick (ClickedFood food)]
+        (text food.name)
+
+main : Program () Model Msg
+main =
+    Browser.sandbox
+        { init = initialModel
+        , view = view
+        , update = update
+        }
+
