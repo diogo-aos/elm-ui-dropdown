@@ -10,17 +10,24 @@ import Element.Border as Border
 import Element.Events as Events
 
 type alias Model =
-    { favoriteFood : Maybe Food
-    , status : Status}
+    { favoriteFood : Dropdown Food
+--    , favoriteCar : Dropdown Car
+    }
 
+type Dropdown a
+    = Normal (Maybe a)
+    | Select (List a)
+
+{--    
 type Status
     = Normal
     | SelectFood
+    | SelectCar
+--}
 
 initialModel : Model
 initialModel =
-    { favoriteFood = Nothing
-    , status = Normal
+    { favoriteFood = Normal Nothing
     }
     
 type FoodType
@@ -44,10 +51,13 @@ foodList =
     , Food 5 "Kimchi" Regional
     ]
 
+    
 type Msg
     = NoAction
     | ClickedSelectFood
     | ClickedDropdownFood Food
+--    | ClickedSelectCar
+--    | ClickedDropdownCar Car
       
 
 update : Msg -> Model -> Model
@@ -57,38 +67,74 @@ update msg model =
             model
             
         ClickedSelectFood ->
-            { model | status = SelectFood }
+            { model | favoriteFood = Select foodList }
             
         ClickedDropdownFood food ->
-            { model | status = Normal, favoriteFood = Just food }
+            { model | favoriteFood = Normal (Just food) }
 
+--        ClickedSelectCar ->
+--            { model | status = SelectCar }
+
+--        ClickedDropdownCar car ->
+--            { model | status = Normal, favoriteCar = Just car }                
+
+dropdownView : Dropdown a -> (a -> String) -> Msg -> (a -> Msg) -> E.Element Msg
+dropdownView dropdownState toString openMenuMsg clickedOptionMsg =
+    let
+        selectedName =
+            case dropdownState of
+                Normal (Just someA) -> toString someA
+                _ -> "Click to select"
+
+        menu : E.Element Msg
+        menu =
+            case dropdownState of
+                Select options ->
+                    let
+                        mouseOverColor : E.Color
+                        mouseOverColor = E.rgb 0.9 0.9 0.1
+                                         
+                        backgroundColor : E.Color
+                        backgroundColor = E.rgb 1 1 1
+                                          
+                        viewOption : a -> E.Element Msg
+                        viewOption option =
+                            E.el
+                                [ E.width E.fill
+                                , E.mouseOver [Background.color overColor]
+                                , Background.color white
+                                , Events.onClick (clickedOptionMsg option)
+                                ]
+                                (E.text <| toString option)
+                                    
+                        viewOptionList : List a -> E.Element Msg
+                        viewOptionList inputOptions =
+                            E.column [] <|
+                                List.map viewOption inputOptions
+                                            
+                    in
+                        E.el
+                            [ Border.width 1
+                            , Border.dashed
+                        , E.padding 3
+                        , E.below (viewOptionList options)
+                        ]
+                        (E.text selectedName)                
+                _ ->
+                    E.el
+                        [ Border.width 1
+                        , Border.dashed
+                        , E.padding 3
+                        , Events.onClick openMenuMsg
+                        ]
+                        (E.text selectedName)
+    in
+        menu
+    
+
+                            
 view : Model -> Html.Html Msg
 view model =
-    let
-        selectedFoodName = 
-            case model.favoriteFood of
-                Nothing -> "No food selected. Click here to select."
-                Just food -> food.name
-        dropdown =
-            case model.status of
-                Normal ->
-                    E.el
-                        [ Border.width 1
-                        , Border.dashed
-                        , E.padding 3
-                        , Events.onClick ClickedSelectFood
-                        ]
-                        (E.text selectedFoodName)
-                SelectFood ->
-                    E.el
-                        [ Border.width 1
-                        , Border.dashed
-                        , E.padding 3
-                        , E.below (viewFoodList foodList)
-                        ]
-                        (E.text selectedFoodName)
-                
-    in
     E.layout
         []
         (
@@ -97,17 +143,14 @@ view model =
             , E.centerY
         ]
             [ E.text "You favorite food is:"
-            , dropdown
+            , dropdownView  model.favoriteFood .name ClickedSelectFood ClickedDropdownFood
             , E.text "... the best food."
+--            , E.text "Favorite car:"
+--            , dropdownView (model.favoriteCar == Select) model.favoriteCar carList .name ClickedSelectCar ClickedDropdownCar
             ]
         )
 
-viewFoodList : List Food -> E.Element Msg
-viewFoodList foods =
-    E.column
-        [ ]
-        <|
-            List.map viewFood foods
+type alias Car = {id : Int, name: String}
 
 overColor : E.Color
 overColor = E.rgb 0.9 0.9 0.1
@@ -115,15 +158,6 @@ overColor = E.rgb 0.9 0.9 0.1
 white : E.Color
 white = E.rgb 1 1 1
 
-viewFood : Food -> E.Element Msg
-viewFood food =
-    E.el
-        [ E.width E.fill
-        , E.mouseOver [Background.color overColor]
-        , Background.color white
-        , Events.onClick (ClickedDropdownFood food)
-        ]
-        (E.text food.name)        
         
 main : Program () Model Msg
 main =
