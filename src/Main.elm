@@ -18,6 +18,10 @@ type Dropdown a
     = Normal (Maybe a)
     | Select (List a)
 
+type DropdownAction a
+    = OpenList
+    | ClickedOption a
+      
 {--    
 type Status
     = Normal
@@ -54,8 +58,7 @@ foodList =
     
 type Msg
     = NoAction
-    | ClickedSelectFood
-    | ClickedDropdownFood Food
+    | FoodDropdown (DropdownAction Food)
 --    | ClickedSelectCar
 --    | ClickedDropdownCar Car
       
@@ -66,11 +69,12 @@ update msg model =
         NoAction ->
             model
             
-        ClickedSelectFood ->
-            { model | favoriteFood = Select foodList }
-            
-        ClickedDropdownFood food ->
-            { model | favoriteFood = Normal (Just food) }
+        FoodDropdown action ->
+            case action of
+                OpenList ->
+                    { model | favoriteFood = Select foodList }
+                ClickedOption food ->
+                    { model | favoriteFood = Normal (Just food) }
 
 --        ClickedSelectCar ->
 --            { model | status = SelectCar }
@@ -78,8 +82,8 @@ update msg model =
 --        ClickedDropdownCar car ->
 --            { model | status = Normal, favoriteCar = Just car }                
 
-dropdownView : Dropdown a -> (a -> String) -> Msg -> (a -> Msg) -> E.Element Msg
-dropdownView dropdownState toString openMenuMsg clickedOptionMsg =
+dropdownView : Dropdown a -> (a -> String) -> (DropdownAction a -> Msg) -> E.Element Msg
+dropdownView dropdownState toString toMsg =
     let
         selectedName =
             case dropdownState of
@@ -103,7 +107,7 @@ dropdownView dropdownState toString openMenuMsg clickedOptionMsg =
                                 [ E.width E.fill
                                 , E.mouseOver [Background.color overColor]
                                 , Background.color white
-                                , Events.onClick (clickedOptionMsg option)
+                                , Events.onClick (toMsg (ClickedOption option))
                                 ]
                                 (E.text <| toString option)
                                     
@@ -125,7 +129,7 @@ dropdownView dropdownState toString openMenuMsg clickedOptionMsg =
                         [ Border.width 1
                         , Border.dashed
                         , E.padding 3
-                        , Events.onClick openMenuMsg
+                        , Events.onClick (toMsg OpenList)
                         ]
                         (E.text selectedName)
     in
@@ -143,7 +147,7 @@ view model =
             , E.centerY
         ]
             [ E.text "You favorite food is:"
-            , dropdownView  model.favoriteFood .name ClickedSelectFood ClickedDropdownFood
+            , dropdownView  model.favoriteFood .name FoodDropdown
             , E.text "... the best food."
 --            , E.text "Favorite car:"
 --            , dropdownView (model.favoriteCar == Select) model.favoriteCar carList .name ClickedSelectCar ClickedDropdownCar
